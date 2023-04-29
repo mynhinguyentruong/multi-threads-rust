@@ -1,25 +1,29 @@
-use std::sync::mpsc;
-use std::thread;
-use std::thread::Builder;
-use std::thread::{JoinHandle, Thread};
+use std::sync::{Arc, mpsc, Mutex};
+use std::sync::mpsc::Receiver;
+use std::thread::{Builder,JoinHandle, Thread};
 use std::time::Duration;
 
 pub struct ThreadPool {
-     pub(crate) workers: Vec<Worker>
+    pub(crate) workers: Vec<Worker>,
+    sender: mpsc::Sender<Job>
 }
 
-pub struct Worker {
+struct Worker {
     id: usize,
-    pub(crate) thread: JoinHandle<()>
+    thread : JoinHandle<Arc<Mutex<Receiver<Job>>>>,
+}
+
+struct Job {
+    // hold the closure we want to send down channel
 }
 
 impl Worker {
 
-    pub fn new(id: usize) -> Worker {
-        let builder = thread::Builder::new();
-        let thread = builder::spawn(|| {
-            println!("I'm a worker")
-        });
+    pub fn new(id: usize, receiver: Arc<Mutex<Receiver<Job>>>) -> Worker {
+        let builder: Builder = Builder::new();
+        let thread = builder.spawn(|| {
+            receiver
+        }).unwrap();
         return Worker { id, thread }
     }
 }
@@ -29,10 +33,14 @@ impl ThreadPool {
     pub fn new(size: usize) -> ThreadPool {
         let mut workers = Vec::with_capacity(size);
 
+        let (sender, receiver) = mpsc::channel();
+
+        let receiver = Arc::new(Mutex::new(receiver));
+
         for id in 0..size {
-            workers.push(Worker::new(id))
+            workers.push(Worker::new(id, Arc::clone(&receiver)));
         }
-        return ThreadPool { workers }
+        return ThreadPool { workers, sender }
 
     }
 }

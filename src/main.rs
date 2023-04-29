@@ -23,9 +23,7 @@ fn main() {
 
     let pool = ThreadPool::new(3);
 
-    let worker = Worker::new(1);
 
-    worker.thread.join().unwrap();
 
 }
 
