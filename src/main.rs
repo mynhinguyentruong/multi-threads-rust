@@ -11,7 +11,8 @@ use::std::thread;
 // use std::sync::{Arc, mpsc, Mutex};
 // use std::rc::Rc;
 
-use std::{fs, io::{prelude::*, BufReader}, net::{TcpStream, TcpListener}};
+use std::{fs, io::{prelude::*, BufReader}, net::{TcpListener, TcpStream}};
+use std::time::Duration;
 
 // use chrono::Utc;
 // use chrono::TimeZone;
@@ -20,18 +21,18 @@ use std::{fs, io::{prelude::*, BufReader}, net::{TcpStream, TcpListener}};
 use lib::{ThreadPool};
 
 fn main() {
-
-
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
 
     let pool = ThreadPool::new(5);
 
     for stream in listener.incoming() {
         let stream = stream.unwrap();
+        // handle_connection(stream);
 
+        // wants one of the idle thread to handle each incoming stream
         pool.execute(|| {
-            handle_connection(stream);
-        })
+            handle_connection(stream)
+        });
     }
 
 }
