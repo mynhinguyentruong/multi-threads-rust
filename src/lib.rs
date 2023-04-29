@@ -1,5 +1,6 @@
 use std::sync::{Arc, mpsc, Mutex};
 use std::sync::mpsc::Receiver;
+use std::thread;
 use std::thread::{Builder,JoinHandle, Thread};
 use std::time::Duration;
 
@@ -32,7 +33,7 @@ impl Worker {
                     break;
                 }
             }
-
+            thread::sleep(Duration::from_secs(1));
         }).unwrap();
         return Worker { id, thread }
     }

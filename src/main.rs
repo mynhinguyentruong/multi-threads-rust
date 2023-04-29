@@ -26,7 +26,7 @@ fn main() {
 
     let pool = ThreadPool::new(5);
 
-    for stream in listener.incoming().take(2) {
+    for stream in listener.incoming() {
         let stream = stream.unwrap();
 
         pool.execute(|| {
@@ -38,8 +38,13 @@ fn main() {
 
 fn handle_connection(mut stream: TcpStream) {
 
+    println!("handle_connection ran");
+
     let mut buffer = [0; 1024];
+    println!("After buffer ...");
     stream.read(&mut buffer).unwrap();
+
+    println!("After stream.read...");
 
     let get = b"GET / HTTP/1.1\r\n";
     let sleep = b"GET /sleep HTTP/1.1\r\n";
@@ -54,12 +59,18 @@ fn handle_connection(mut stream: TcpStream) {
 
     let content = fs::read_to_string(file_name).unwrap();
 
+    println!("After content...");
+
     let response = format!(
         "{}\r\nContent-Length: {}\r\n\r\n{}",
         status_line, content.len(), content
     );
+    println!("After response...");
+
 
     stream.write_all(response.as_bytes()).unwrap();
+
+    println!("After stream.write all");
     stream.flush().unwrap()
 }
 
