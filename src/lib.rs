@@ -10,7 +10,7 @@ pub struct ThreadPool {
 
 struct Worker {
     id: usize,
-    thread: JoinHandle<()>
+    thread: Option<JoinHandle<()>>
 }
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
@@ -21,10 +21,25 @@ impl Worker {
 
         let thread = builder.spawn(move || {
             let job = receiver.lock().unwrap().recv().unwrap();
+
+            println!("Worker {id} got a job; executing.");
+
             job();
         }).unwrap();
 
-        return Worker { id, thread }
+        return Worker { id, thread: Some(thread) }
+    }
+}
+
+impl Drop for ThreadPool {
+    fn drop(&mut self) {
+        for worker in &mut self.workers {
+            // drop
+            println!("Shutting down worker {}", worker.id);
+            if let Some(some_weird_shit) = worker.thread.take() {
+                some_weird_shit.join().unwrap();
+            }
+        }
     }
 }
 
