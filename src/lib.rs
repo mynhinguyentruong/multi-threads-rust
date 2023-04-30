@@ -35,9 +35,10 @@ impl Drop for ThreadPool {
     fn drop(&mut self) {
         for worker in &mut self.workers {
             // drop
-            println!("Shutting down worker {}", worker.id);
-            if let Some(some_weird_shit) = worker.thread.take() {
-                some_weird_shit.join().unwrap();
+            let some_value = worker.thread.take();
+            let Some(thread) = some_value;
+            if thead {
+                thread.join().unwrap();
             }
         }
     }
