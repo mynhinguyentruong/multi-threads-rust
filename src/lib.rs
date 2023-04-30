@@ -5,7 +5,7 @@ use std::thread::{Builder, JoinHandle};
 
 pub struct ThreadPool {
     workers: Vec<Worker>,
-    sender: Sender<Job>
+    sender: Option<Sender<Job>>
 }
 
 struct Worker {
@@ -19,12 +19,19 @@ impl Worker {
     fn new(id: usize, receiver: Arc<Mutex<Receiver<Job>>>) -> Worker {
         let builder = Builder::new().name("builder".into());
 
-        let thread = builder.spawn(move || {
-            let job = receiver.lock().unwrap().recv().unwrap();
+        let thread = builder.spawn(move || loop {
+            let message = receiver.lock().unwrap().recv();
 
-            println!("Worker {id} got a job; executing.");
-
-            job();
+            match message {
+                Ok(job) => {
+                    println!("Worker {id} got a job, executing");
+                    job();
+                }
+                Err(_) => {
+                    println!("Worker {id} got disconnected; shutting down");
+                    break;
+                }
+            }
         }).unwrap();
 
         return Worker { id, thread: Some(thread) }
@@ -33,11 +40,12 @@ impl Worker {
 
 impl Drop for ThreadPool {
     fn drop(&mut self) {
+
+        drop(self.sender.take());
+
         for worker in &mut self.workers {
             // drop
-            let some_value = worker.thread.take();
-            let Some(thread) = some_value;
-            if thead {
+            if let Some(thread) = worker.thread.take() {
                 thread.join().unwrap();
             }
         }
@@ -55,7 +63,7 @@ impl ThreadPool {
             workers.push(Worker::new(id, Arc::clone(&receiver)));
         }
 
-        return ThreadPool { workers, sender }
+        return ThreadPool { workers, sender: Some(sender) }
     }
 
     pub fn execute<A>(&self, f: A)
@@ -63,6 +71,6 @@ impl ThreadPool {
         A: FnOnce() + Send + 'static
     {
         let job: Job = Box::new(f);
-        self.sender.send(job).unwrap();
+        self.sender.as_ref().unwrap().send(job).unwrap();
     }
 }
